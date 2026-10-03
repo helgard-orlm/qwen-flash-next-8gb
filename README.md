@@ -9,6 +9,8 @@ fed with the same weights — see [Correctness](#correctness).
 
 Batch size 1, text only (vision and MTP heads are not wired in). Code comments are in Russian.
 
+Write-up with the story and measurements: [dev.to post](https://dev.to/helgard_orlm/running-a-133-gb-moe-model-on-an-8-gb-gpu-at-11-tokenss-by-streaming-experts-from-nvme-207b).
+
 ## Hardware it was built on
 
 | part | value |
@@ -22,6 +24,7 @@ Batch size 1, text only (vision and MTP heads are not wired in). Code comments a
 
 **Why this model fits the idea.** Each expert is small: 3 × 2560×640 in NVFP4 = 2.70 MiB with scales, 10 per layer,
 48 layers ⇒ **1.27 GiB of experts per token**. For comparison, DeepSeek-V4.1-Flash needs ~4.2 GiB/token
+([same method, 1.6–2.4 tokens/s](https://github.com/helgard-orlm/deepseek-v41-flash-8gb))
 on the same scheme. All experts together are 63.3 GiB; a 16 GB RAM cache holds about a quarter of them.
 
 1. **Split the model.** Everything that is not an expert (embeddings, DeltaNet, attention, router, shared expert,
