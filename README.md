@@ -121,7 +121,15 @@ After setup the snapshot is not needed any more; the script prints how much dele
 The 9.9 GB of non-expert weights are extracted by `setup.sh` (older versions did it on the first server start,
 which still needed the snapshot).
 
-RESULTS_PLACEHOLDER
+**Tested before release** (fresh clone, same machine):
+
+- *two disks* — ✅ full run: with too little space it stops before doing anything (`need 131 GB`, exit 1); with enough
+  space setup took 17 min 12 s, spot check of 204 repacked experts against the originals: 0 differences;
+  `experts.bin`, `experts_scal.npy`, `nonexpert.safetensors` and the PLE table are byte-identical to production;
+  the server started with `QW_ORIG=/nonexistent` (the snapshot is really not needed) and gave the same greedy answers
+  as production; the download step was checked with `hf download --dry-run` of the pinned revision.
+- *one disk* — **not yet tested end to end**: the run was stopped while copying the snapshot, so the hard-link path
+  and the space estimate for this layout are unverified. If it misbehaves, put the snapshot on another disk.
 
 Then point any OpenAI-compatible client (we use Open WebUI) at `http://<host>:9805/v1`.
 The server unloads Ollama models from the GPU on start (`127.0.0.1:11434`), because they share the card.
