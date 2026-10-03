@@ -106,6 +106,11 @@ export QW_ORIG=/path/to/hf-snapshot QW_DIR=/path/on/nvme/qwen38
 QW_RAM_GB=16 QW_PF=2 QW_SPEC=10 QW_PIN=0 QW_DELTA_GRAPH=1 python qwen_server.py   # :9805
 ```
 
+Checked from a clean clone (2026-10-03, same machine): `setup.sh` into an empty `QW_DIR` took 15 min 48 s
+(source on an HDD, ~104 MiB/s), repack check 204/204 experts identical; `experts.bin`, `experts_scal.npy` and the
+`nonexpert.safetensors` extracted on first start are byte-identical to the production directory, and the server
+started from the clone answered three greedy prompts identically to production.
+
 Then point any OpenAI-compatible client (we use Open WebUI) at `http://<host>:9805/v1`.
 The server unloads Ollama models from the GPU on start (`127.0.0.1:11434`), because they share the card.
 Tools and tests import the engine from the repo root: `PYTHONPATH=. python tools/bench.py --new 64`.
