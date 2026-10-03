@@ -1,0 +1,5 @@
+torch==2.11.0      # the one we run: 2.11.0+cu128 (Blackwell sm_120)
+triton==3.6.0
+transformers==5.18.0   # tokenizer/chat template; reference model qwen4_exp for tools/ref_check.py
+safetensors
+numpy
