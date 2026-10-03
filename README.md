@@ -105,14 +105,31 @@ Reference = `transformers` 5.18 `qwen4_exp` with the **same** FP8/NVFP4 weights 
 ```bash
 pip install -r requirements.txt
 export QW_ORIG=/path/to/hf-snapshot QW_DIR=/path/on/nvme/qwen38
-./setup.sh                                  # copies configs + PLE table, repacks experts, checks the repack
+./setup.sh      # downloads the snapshot if QW_ORIG is empty, links/copies configs + PLE table,
+                # repacks and checks experts, extracts the non-expert weights
 QW_RAM_GB=16 QW_PF=2 QW_SPEC=10 QW_PIN=0 QW_DELTA_GRAPH=1 python qwen_server.py   # :9805
 ```
 
-Checked from a clean clone (2026-10-03, same machine): `setup.sh` into an empty `QW_DIR` took 15 min 48 s
-(source on an HDD, ~104 MiB/s), repack check 204/204 experts identical; `experts.bin`, `experts_scal.npy` and the
-`nonexpert.safetensors` extracted on first start are byte-identical to the production directory, and the server
-started from the clone answered three greedy prompts identically to production.
+`setup.sh` checks free space before it starts and handles both layouts:
+
+| layout | example | peak space | after deleting `QW_ORIG` |
+|---|---|---|---|
+| **two disks** | snapshot on an HDD, `QW_DIR` on NVMe | HDD 133 GB + NVMe 132 GB | NVMe 132 GB |
+| **one disk** | both on the same NVMe | 211 GB (PLE table and configs are hard-linked, not copied) | 132 GB |
+
+After setup the snapshot is not needed any more; the script prints how much deleting it frees.
+The 9.9 GB of non-expert weights are extracted by `setup.sh` (older versions did it on the first server start,
+which still needed the snapshot).
+
+**Tested before release** (fresh clone, same machine):
+
+- *two disks* — ✅ full run: with too little space it stops before doing anything (`need 131 GB`, exit 1); with enough
+  space setup took 17 min 12 s, spot check of 204 repacked experts against the originals: 0 differences;
+  `experts.bin`, `experts_scal.npy`, `nonexpert.safetensors` and the PLE table are byte-identical to production;
+  the server started with `QW_ORIG=/nonexistent` (the snapshot is really not needed) and gave the same greedy answers
+  as production; the download step was checked with `hf download --dry-run` of the pinned revision.
+- *one disk* — **not yet tested end to end**: the run was stopped while copying the snapshot, so the hard-link path
+  and the space estimate for this layout are unverified. If it misbehaves, put the snapshot on another disk.
 
 Then point any OpenAI-compatible client (we use Open WebUI) at `http://<host>:9805/v1`.
 The server unloads Ollama models from the GPU on start (`127.0.0.1:11434`), because they share the card.
@@ -121,7 +138,7 @@ Tools and tests import the engine from the repo root: `PYTHONPATH=. python tools
 | env | meaning | default |
 |---|---|---|
 | `QW_DIR` | working directory on NVMe | `/fast/qwen38` |
-| `QW_ORIG` | original HF snapshot (setup / first start only) | — |
+| `QW_ORIG` | original HF snapshot (setup only) | — |
 | `QW_RAM_GB` | expert RAM cache | 16 |
 | `QW_PF` | experts prefetched into the disk gap | 2 |
 | `QW_SPEC` | next-layer experts copied to GPU early | 0 (use 10) |
